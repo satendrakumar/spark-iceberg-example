@@ -13,12 +13,13 @@ tail -f logs/*
 ```
 
 ### Load data into iceberg using Spark
+if you don't have sbt installed then [Install from here](https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Mac.html)
+
 ```shell
 sbt "runMain com.techmonad.spark.IcebergDataGenerator"
 ```
 
 ### Start query service:
-if you don't have sbt installed then [Install from here](https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Mac.html)
 ```shell
 sbt "runMain com.techmonad.http.HTTPService"
 ```
