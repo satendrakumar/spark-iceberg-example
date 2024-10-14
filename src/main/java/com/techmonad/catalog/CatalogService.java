@@ -17,7 +17,6 @@ public class CatalogService {
         Configuration conf = new Configuration();
         catalog.setConf(conf);
         catalog.initialize("test", properties);
-        System.out.println(catalog.name());
         return catalog;
     }
 }

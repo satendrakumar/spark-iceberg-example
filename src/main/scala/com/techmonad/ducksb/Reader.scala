@@ -3,22 +3,25 @@ package com.techmonad.ducksb
 
 import com.techmonad.catalog.CatalogService
 import org.apache.iceberg.catalog.TableIdentifier
-import org.apache.iceberg.{CatalogProperties, Table, TableScan}
+import org.apache.iceberg.{Table, TableScan}
 
 import java.sql.{Connection, DriverManager, ResultSet}
 import scala.util.{Failure, Success, Try}
 import org.slf4j.{Logger, LoggerFactory}
 import org.apache.iceberg.expressions.{Expression, Expressions}
-import org.apache.iceberg.hive.HiveCatalog
 import org.apache.iceberg.rest.RESTCatalog
-import org.apache.spark.sql.SparkSession
 
 import scala.jdk.CollectionConverters._
 
 object Reader {
 
 
-  val logger: Logger = LoggerFactory.getLogger(this.getClass())
+  private val logger: Logger = LoggerFactory.getLogger(this.getClass)
+
+  private lazy val initDuckDBConnection: Try[Connection] = Try {
+    DriverManager.getConnection("jdbc:duckdb:")
+  }
+  private lazy val restCatalog = Try{ CatalogService.getCatalog}
 
   implicit class JsonResult(resultSet:ResultSet) {
     def toStringList:List[String] = {
@@ -46,10 +49,7 @@ object Reader {
     scanFiles.mkString(",")
   }
 
-  private def initDuckDBConnection: Try[Connection] = Try {
-    val con = DriverManager.getConnection("jdbc:duckdb:")
-    con
-  }
+
 
   private def executeQuery(connection: Connection, query:String):Try[ResultSet] = Try{
     logger.info("query ### " + query)
@@ -60,11 +60,11 @@ object Reader {
     query.replaceAll("<FILES_LIST>", dataFilesStr)
   }
 
-  private def executeIcebergQuery(query:String): List[String] = {
-    val partitionPredicate = Expressions.equal("date", "2022-06-28")
-
+  private def executeIcebergQuery(query:String, from:String, to:String): List[String] = {
+    val partitionPredicate =
+    Expressions.and(Expressions.greaterThanOrEqual("date", from), Expressions.lessThanOrEqual("date", to))
     val jsonDataRows = for {
-      catalog         <- Try{ CatalogService.getCatalog}
+      catalog         <- restCatalog
       table           <- getIcebergTableByName("db", "customers", catalog)
       tableScan       <- scanTableWithPartitionPredicate(table, partitionPredicate)
       dataFilesString <- getDataFilesLocations(tableScan)
@@ -83,18 +83,16 @@ object Reader {
 
   }
 
-  def main(args: Array[String]): Unit = {
-
-    val query = """
-                  |SELECT row_to_json(lst)
-                  |FROM (
-                  | SELECT customer_id, customer_name, date,transaction_details
-                  | FROM parquet_scan([ <FILES_LIST>])
-                  |) lst
-                  |""".stripMargin
-
-    val results = executeIcebergQuery(query)
-    results.foreach(result => logger.info(result))
+  def getCustomer(from: String, to: String): String = {
+    val query =
+      """
+        |SELECT row_to_json(lst)
+        |FROM (
+        | SELECT customer_id, customer_name, date,transaction_details
+        | FROM parquet_scan([ <FILES_LIST>])
+        |) lst
+        |""".stripMargin
+   "[" + executeIcebergQuery(query, from, to).mkString(",") + "]"
   }
 
 }
