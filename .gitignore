@@ -49,3 +49,4 @@ warehouse
 metastore_db
 logs
 .idea
+derby.log

@@ -1,6 +1,7 @@
 package com.techmonad.ducksb
 
 
+import com.techmonad.catalog.CatalogService
 import org.apache.iceberg.catalog.TableIdentifier
 import org.apache.iceberg.{CatalogProperties, Table, TableScan}
 
@@ -8,12 +9,14 @@ import java.sql.{Connection, DriverManager, ResultSet}
 import scala.util.{Failure, Success, Try}
 import org.slf4j.{Logger, LoggerFactory}
 import org.apache.iceberg.expressions.{Expression, Expressions}
-
 import org.apache.iceberg.hive.HiveCatalog
+import org.apache.iceberg.rest.RESTCatalog
+import org.apache.spark.sql.SparkSession
 
 import scala.jdk.CollectionConverters._
 
 object Reader {
+
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass())
 
@@ -26,16 +29,8 @@ object Reader {
     }
   }
 
-  def getCatalog(): Try[HiveCatalog] = Try{
-    val catalog:HiveCatalog= new HiveCatalog()
-    val properties:java.util.Map[String, String] = new java.util.HashMap()
-    properties.put("warehouse", "warehouse")
-    catalog.initialize("hive", properties)
-    catalog
-  }
 
-
-  private def getIcebergTableByName(namespace: String, tableName: String, catalog: HiveCatalog): Try[Table] = Try{
+  private def getIcebergTableByName(namespace: String, tableName: String, catalog: RESTCatalog): Try[Table] = Try{
     val tableID = TableIdentifier.of(namespace, tableName)
     catalog.loadTable(tableID)
   }
@@ -57,6 +52,7 @@ object Reader {
   }
 
   private def executeQuery(connection: Connection, query:String):Try[ResultSet] = Try{
+    logger.info("query ### " + query)
     connection.createStatement.executeQuery(query)
   }
 
@@ -65,12 +61,10 @@ object Reader {
   }
 
   private def executeIcebergQuery(query:String): List[String] = {
-
-    val partitionPredicate = Expressions.equal("date", "2023-10-01")
-      //Expressions.and(Expressions.equal("date", "2023-10-01"), Expressions.equal("customer_id", "2000"))
+    val partitionPredicate = Expressions.equal("date", "2022-06-28")
 
     val jsonDataRows = for {
-      catalog         <- getCatalog()
+      catalog         <- Try{ CatalogService.getCatalog}
       table           <- getIcebergTableByName("db", "customers", catalog)
       tableScan       <- scanTableWithPartitionPredicate(table, partitionPredicate)
       dataFilesString <- getDataFilesLocations(tableScan)
@@ -102,6 +96,5 @@ object Reader {
     val results = executeIcebergQuery(query)
     results.foreach(result => logger.info(result))
   }
-
 
 }

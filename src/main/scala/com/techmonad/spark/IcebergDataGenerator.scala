@@ -8,7 +8,6 @@ import java.time.LocalDate
 object IcebergDataGenerator {
   def main(args: Array[String]): Unit = {
 
-    // Create Spark Session with Iceberg support
     val spark =
       SparkSession
         .builder()
@@ -17,18 +16,17 @@ object IcebergDataGenerator {
       .config("spark.driver.memory", "8g")
       .config("spark.driver.maxResultSize", "4g")
       .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
-      .config("spark.sql.catalog.spark_catalog","org.apache.iceberg.spark.SparkSessionCatalog")
-      .config("spark.sql.catalog.spark_catalog.type","hive")
-      .config("spark.sql.catalog.local","org.apache.iceberg.spark.SparkCatalog")
-      .config("spark.sql.catalog.local.type","hadoop")
-      .config("spark.sql.catalog.local.warehouse","warehouse")
+      .config("spark.sql.catalog.rest","org.apache.iceberg.spark.SparkCatalog")
+      .config("spark.sql.catalog.rest.type","rest")
+      .config("spark.sql.catalog.rest.uri","http://127.0.0.1:9001/iceberg/")
       .getOrCreate()
 
     import spark.implicits._
 
+    spark.sql("CREATE DATABASE IF NOT EXISTS db;")
     spark.sql(
       """
-        |CREATE TABLE local.db.customers (
+        |CREATE TABLE rest.db.customers (
         |  customer_id INT,
         |  customer_name STRING,
         |  date DATE,
@@ -50,10 +48,10 @@ object IcebergDataGenerator {
     }
 
     // Generate  1,00,000 users with 100 transaction
-    (1 to 100).foreach { itr =>
+    (1 to 10).foreach { itr =>
      println("loading ...... " + itr)
 
-      val customerData = generateCustomerData(1 to 100000)
+      val customerData = generateCustomerData(1 to 100)
 
       // Convert to DataFrame
       val customerDF = customerData.toDF("customer_id", "customer_name", "date", "transaction_details")
@@ -62,10 +60,10 @@ object IcebergDataGenerator {
       customerDF.write
         .format("iceberg")
         .mode("append")
-        .save("local.db.customers")
+        .save("rest.db.customers")
     }
 
-   val df =  spark.sql("SELECT * FROM local.db.customers;")
+   val df =  spark.sql("SELECT * FROM rest.db.customers;")
     df.show()
     println(df.count())
 
