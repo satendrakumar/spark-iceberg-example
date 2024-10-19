@@ -19,7 +19,19 @@ object Reader {
   private val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
   private lazy val initDuckDBConnection: Try[Connection] = Try {
-    DriverManager.getConnection("jdbc:duckdb:")
+    val conn = DriverManager.getConnection("jdbc:duckdb:")
+    val initStatement =
+      s"""
+         |INSTALL httpfs;
+         |LOAD httpfs;
+         |SET s3_region='ap-south-1';
+         |SET s3_access_key_id='${sys.env("AWS_ACCESS_KEY_ID")}';
+         |SET s3_secret_access_key='${sys.env("AWS_SECRET_ACCESS_KEY")}';
+         |""".stripMargin
+     println(initStatement)
+    conn.createStatement().execute(initStatement)
+
+    conn
   }
   private lazy val restCatalog = Try{ CatalogService.getCatalog}
 
