@@ -70,30 +70,37 @@ object Reader {
     query.replaceAll("<FILES_LIST>", dataFilesStr)
   }
 
-  private def executeIcebergQuery(query:String, from:String, to:String): List[String] = {
+  private def executeIcebergQuery(query:String, id:Int, from:Option[String], to:Option[String]): List[String] = {
+    val idFilter = Expressions.equal("customer_id", id)
     val partitionPredicate =
-    Expressions.and(Expressions.greaterThanOrEqual("date", from), Expressions.lessThanOrEqual("date", to))
+      if (from.isDefined || to.isDefined) {
+        val dateFilter = Expressions.and(Expressions.greaterThanOrEqual("date", from.get), Expressions.lessThanOrEqual("date", to.get))
+        Expressions.and(idFilter, dateFilter)
+
+      } else {
+        idFilter
+      }
     val jsonDataRows = for {
-      catalog         <- restCatalog
-      table           <- getIcebergTableByName("db", "customers", catalog)
-      tableScan       <- scanTableWithPartitionPredicate(table, partitionPredicate)
+      catalog <- restCatalog
+      table <- getIcebergTableByName("db", "customers", catalog)
+      tableScan <- scanTableWithPartitionPredicate(table, partitionPredicate)
       dataFilesString <- getDataFilesLocations(tableScan)
-      queryStatement  <- formatQuery(query, dataFilesString)
-      dbConnection    <- initDuckDBConnection
-      resultSet       <- executeQuery(dbConnection, queryStatement)
+      queryStatement <- formatQuery(query, dataFilesString)
+      dbConnection <- initDuckDBConnection
+      resultSet <- executeQuery(dbConnection, queryStatement)
     } yield resultSet.toStringList
 
     jsonDataRows match {
       case Success(jsonRows) => jsonRows
-      case Failure(exception) => {
+      case Failure(exception) =>
         logger.error("Error fetching data", exception)
         List[String]()
-      }
-    }
 
+    }
   }
 
-  def getCustomer(from: String, to: String): String = {
+
+  def getCustomer(id:Int, from: Option[String], to: Option[String]): String = {
     val query =
       """
         |SELECT row_to_json(lst)
@@ -102,7 +109,7 @@ object Reader {
         | FROM parquet_scan([ <FILES_LIST>])
         |) lst
         |""".stripMargin
-   "[" + executeIcebergQuery(query, from, to).mkString(",") + "]"
+   "[" + executeIcebergQuery(query, id, from, to).mkString(",") + "]"
   }
 
 }

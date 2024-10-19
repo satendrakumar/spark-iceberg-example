@@ -51,18 +51,20 @@ object IcebergDataGenerator {
 
     // Generate  1,00,000 users with 100 transaction
     (1 to 100).foreach { itr =>
-     println("loading ...... " + itr)
-      val customerData = generateCustomerData(1 to 100000)
-
-      // Convert to DataFrame
-      val customerDF = customerData.toDF("customer_id", "customer_name", "date", "transaction_details")
-
-      // Write the data to an Apache Iceberg table
-      customerDF
-        .write
-        .format("iceberg")
-        .mode("append")
-        .save("rest.db.customers")
+      println("loading ...... " + itr)
+      // Load 10K at time due OOM
+      (1 to 100000).grouped(10000).foreach { batch =>
+        println(s"batch start ${batch.head} and end ${batch.last}")
+        val customerData = generateCustomerData(batch)
+        // Convert to DataFrame
+        val customerDF = customerData.toDF("customer_id", "customer_name", "date", "transaction_details")
+        // Write the data to an Apache Iceberg table
+        customerDF
+          .write
+          .format("iceberg")
+          .mode("append")
+          .save("rest.db.customers")
+      }
     }
 
    val df =  spark.sql("SELECT * FROM rest.db.customers;")
