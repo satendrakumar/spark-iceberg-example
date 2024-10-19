@@ -28,9 +28,7 @@ object Reader {
          |SET s3_access_key_id='${sys.env("AWS_ACCESS_KEY_ID")}';
          |SET s3_secret_access_key='${sys.env("AWS_SECRET_ACCESS_KEY")}';
          |""".stripMargin
-     println(initStatement)
     conn.createStatement().execute(initStatement)
-
     conn
   }
   private lazy val restCatalog = Try{ CatalogService.getCatalog}

@@ -34,7 +34,7 @@ object IcebergDataGenerator {
         |  date DATE,
         |  transaction_details STRING
         |) USING iceberg
-        |PARTITIONED BY (days(date))
+        |PARTITIONED BY (bucket(1000, customer_id), days(date))
   """.stripMargin)
 
 //bucket(1000,customer_id),
@@ -43,7 +43,7 @@ object IcebergDataGenerator {
       numbers.map { i =>
         val customerId = i
         val customerName = s"Customer_$i"
-        val date = Date.valueOf(LocalDate.now().minusDays(random.nextInt(365 * 5)))  // Random date within the last 5 years
+        val date = Date.valueOf(LocalDate.now().minusDays(random.nextInt(180)))  // Random date within the last 6 months
         val transactionDetails = s"Transaction details for customer $i"
         (customerId, customerName, date, transactionDetails)
       }
