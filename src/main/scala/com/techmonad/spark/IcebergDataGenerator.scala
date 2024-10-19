@@ -15,7 +15,7 @@ object IcebergDataGenerator {
         .master("local[*]")
         .config("spark.driver.memory", "8g")
         .config("spark.executor.memory", "8g")
-        .config("spark.driver.maxResultSize", "4g")
+        .config("spark.driver.maxResultSize", "2g")
         .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
         .config("spark.sql.catalog.rest", "org.apache.iceberg.spark.SparkCatalog")
         .config("spark.sql.catalog.rest.type", "rest")

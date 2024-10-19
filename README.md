@@ -1,6 +1,7 @@
 # spark-iceberg-example
 
-### Gravitino RESTCatalog server setup 
+### Gravitino RESTCatalog server setup
+[iceberg-rest-service-doc](https://github.com/apache/gravitino/blob/main/docs/iceberg-rest-service.md)
 ```shell
 git clone git@github.com:datastrato/gravitino.git
 cd gravitino
@@ -11,6 +12,8 @@ bin/gravitino-iceberg-rest-server.sh start
 # Logs
 tail -f logs/*
 ```
+##### Add aws jar to libraries from [here](https://mvnrepository.com/artifact/org.apache.iceberg/iceberg-aws-bundle/1.6.1)
+
 
 ### Load data into iceberg using Spark
 if you don't have sbt installed then [Install from here](https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Mac.html)
