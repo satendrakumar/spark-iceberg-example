@@ -24,3 +24,14 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-stream" % AkkaVersion,
   "com.typesafe.akka" %% "akka-http" % AkkaHttpVersion
 )
+
+
+enablePlugins(JavaAppPackaging)
+
+dockerExposedVolumes := Seq("/opt/docker/logs/")
+
+dockerBaseImage := "openjdk:11"
+
+dockerExposedPorts := Seq(8001, 8002)
+
+dockerAlias := dockerAlias.value.withTag(Option("v1.0.0"))
