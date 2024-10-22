@@ -20,6 +20,8 @@ object IcebergDataGenerator {
         .config("spark.sql.catalog.rest", "org.apache.iceberg.spark.SparkCatalog")
         .config("spark.sql.catalog.rest.type", "rest")
         .config("spark.sql.catalog.rest.uri", "http://127.0.0.1:9001/iceberg/")
+        .config("spark.sql.adaptive.enabled", "true")
+        .config("spark.sql.shuffle.partitions", "400")
         .getOrCreate()
 
     import spark.implicits._
@@ -52,19 +54,15 @@ object IcebergDataGenerator {
     // Generate  1,00,000 users with 100 transaction
     (1 to 100).foreach { itr =>
       println("loading ...... " + itr)
-      // Load 10K at time due OOM
-      (1 to 100000).grouped(10000).foreach { batch =>
-        println(s"batch start ${batch.head} and end ${batch.last}")
-        val customerData = generateCustomerData(batch)
-        // Convert to DataFrame
-        val customerDF = customerData.toDF("customer_id", "customer_name", "date", "transaction_details")
-        // Write the data to an Apache Iceberg table
-        customerDF
-          .write
-          .format("iceberg")
-          .mode("append")
-          .save("rest.db.customers")
-      }
+      val customerData = generateCustomerData(1 to 100000)
+      // Convert to DataFrame
+      val customerDF = customerData.toDF("customer_id", "customer_name", "date", "transaction_details")
+      // Write the data to an Apache Iceberg table
+      customerDF
+        .write
+        .format("iceberg")
+        .mode("append")
+        .save("rest.db.customers")
     }
 
    val df =  spark.sql("SELECT * FROM rest.db.customers;")
